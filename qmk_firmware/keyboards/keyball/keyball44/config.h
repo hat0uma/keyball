@@ -77,3 +77,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // To squeeze firmware size
 #undef LOCKING_SUPPORT_ENABLE
 #undef LOCKING_RESYNC_ENABLE
+
+// tab and hold
+#define HOLD_ON_OTHER_KEY_PRESS_PER_KEY
