@@ -16,17 +16,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "action_layer.h"
+#include "keycodes.h"
 #include QMK_KEYBOARD_H
 
 #include "quantum.h"
+#include "keyball44.h"
+#include <stdint.h>
+#include "action.h"
+#include "action_util.h"
+#include "lib/keyball/keyball.h"
+#include "modifiers.h"
+#include "keymap_japanese.h"
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // keymap for default (VIA)
   [0] = LAYOUT_universal(
-    KC_ESC   , KC_Q     , KC_W     , KC_E     , KC_R     , KC_T     ,                                        KC_Y     , KC_U     , KC_I     , KC_O     , KC_P     , KC_DEL   ,
-    KC_TAB   , KC_A     , KC_S     , KC_D     , KC_F     , KC_G     ,                                        KC_H     , KC_J     , KC_K     , KC_L     , KC_SCLN  , S(KC_7)  ,
-    KC_LSFT  , KC_Z     , KC_X     , KC_C     , KC_V     , KC_B     ,                                        KC_N     , KC_M     , KC_COMM  , KC_DOT   , KC_SLSH  , KC_INT1  ,
+    KC_ESC   , KC_Q     , KC_W     , KC_E     , KC_R     , KC_T     ,                                        KC_Y     , KC_U     , KC_I     , KC_O     , KC_P           , KC_DEL ,
+    KC_TAB   , KC_A     , KC_S     , KC_D     , KC_F     , KC_G     ,                                        KC_H     , KC_J     , KC_K     , KC_L     , LT(3,KC_SCLN)  , JP_COLN,
+    KC_LSFT  , KC_Z     , KC_X     , KC_C     , KC_V     , KC_B     ,                                        KC_N     , KC_M     , KC_COMM  , KC_DOT   , KC_SLSH        , KC_INT1,
               KC_LALT,KC_LGUI,LCTL_T(KC_LNG2)     ,LT(1,KC_SPC),LT(3,KC_LNG1),                  KC_BSPC,LT(2,KC_ENT), RCTL_T(KC_LNG2),     KC_RALT  , KC_PSCR
   ),
 
@@ -62,13 +71,60 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case LCTL_T(KC_LNG2):
-        case LT(3,KC_LNG1):
-        case LT(2,KC_ENT):
+        case LT(3, KC_LNG1):
+        case LT(2, KC_ENT):
             return true;
-        case LT(1,KC_SPC):
+        case LT(1, KC_SPC):
         default:
             return false;
     }
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (!record->event.pressed) {
+        return true;
+    }
+
+    const bool lshifted = get_mods() & MOD_BIT(KC_LSFT);
+    const bool rshifted = get_mods() & MOD_BIT(KC_RSFT);
+
+    // pseudo us layout
+    switch (keycode) {
+        case LT(3, KC_SCLN):
+            if (get_highest_layer(layer_state) != 0) {
+                return true;
+            }
+            if (lshifted || rshifted) {
+                unregister_mods(MOD_MASK_SHIFT);
+                tap_code(JP_COLN);
+                if (lshifted) {
+                    register_mods(MOD_BIT(KC_LSFT));
+                }
+                if (rshifted) {
+                    register_mods(MOD_BIT(KC_RSFT));
+                }
+                return false;
+            } else {
+                // scolon
+                return true;
+            }
+        case JP_COLN:
+            if (get_highest_layer(layer_state) != 0) {
+                return true;
+            }
+            if (lshifted || rshifted) {
+                tap_code(JP_2); // shift + 2 is "
+                return false;
+            } else {
+                register_mods(MOD_BIT(KC_LSFT));
+                tap_code(JP_7); // shift + 7 is '
+                unregister_mods(MOD_BIT(KC_LSFT));
+                return false;
+            }
+        default:
+            break;
+    }
+    return true;
 }
 
 #ifdef OLED_ENABLE
